@@ -1,5 +1,6 @@
 const Post = require('../models/post.model')
 
+
 // This function is for creating a new Post
 async function createPost(req, res) {
   const { body } = req;

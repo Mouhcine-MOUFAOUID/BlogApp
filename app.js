@@ -1,6 +1,7 @@
-const express = require('express')
+const express = require('express');
+const { body, validationResult } = require("express-validator");
 require('dotenv').config();
-const mongoose = require('./models/mongodb')
+const mongoose = require('./models/mongodb');
 const userRouter = require('./routes/userRoutes');
 const postRouter = require('./routes/postRoutes');
 

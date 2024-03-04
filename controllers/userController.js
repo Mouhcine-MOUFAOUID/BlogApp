@@ -1,27 +1,42 @@
 const User = require("../models/user.model");
+const bcrypt = require("bcrypt");
+const saltRounds = 459;
 
 // This function create Users
 async function createUser(req, res) {
   const { body } = req;
+
+  if (!body.name || !body.email || !body.age || !body.password) {
+    console.error('Error Creating a new User: Please fill all the fields');
+    return res.status(400).json({ error: 'Please fill all the fields' });
+  }
+
   try {
+
+    // Let's hash the password
+    const passwordHash = await bcrypt.hash(body.password, saltRounds);
+
+    // Let's create the user
     const userCount = await User.countDocuments();
     const newUser = await User.create({
       id: userCount + 1,
       name: body.name,
       email: body.email,
       age: body.age,
-      password: body.password,
+      password: passwordHash,
     });
+
     res.status(201).json(newUser);
   } catch (err) {
-    if (!body.name || !body.email || !body.age || !body.password) {
-      console.error("Error Creating a new User" + err);
-      res.status(500).json({ error: "Please fill all the fields" });
+    console.error('Error Creating a new User:', err);
+    if (err.code === 11000) {
+      return res.status(400).json({ error: 'Email already exists' });
     }
+    res.status(500).json({ error: 'Internal server error' });
   }
-  console.log("Cannot add this user");
-  res.status(400).json({ message: "Email already exists" });
 }
+
+
 
 // This one shows all the Users
 async function getAllUsers(req, res) {
@@ -51,7 +66,10 @@ async function getUserById(req, res) {
 
 // This one update the user
 async function updateUser(req, res) {
-  const { body, params: { id }} = req;
+  const {
+    body,
+    params: { id },
+  } = req;
   try {
     const user = await User.findOne({ _id: id });
 
@@ -83,8 +101,6 @@ async function updateUser(req, res) {
     res.status(500).json({ error: "Internal Server Error" });
   }
 }
-
-
 
 // this one delete the selected User
 async function deleteUser(req, res) {
