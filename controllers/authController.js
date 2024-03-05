@@ -1,27 +1,33 @@
-const User = require("../models/user.model");
-const jwt = require("jsonwebtoken");
-const { body, validationResult } = require("express-validator");
+const User = require('../models/user.model');
+const dotenv = require('dotenv');
+const jwt = require('jsonwebtoken');
 
-async function toAuthenticate(req, res){
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-  
-      const { name, password } = req.body;
-      const user = User.find(
-        (u) => u.name === name && u.password === password
-      );
-  
-      if (user) {
-        const token = jwt.sign({ user: user.id }, "secret_key", {
-          expiresIn: "10sec",
-        });
-        res.status(200).json({ message: "Authentication successful!", token });
-      } else {
-        res.status(401).json({ message: "Authentication failed!" });
-      }
+
+const generateToken = (email, _id, role) => {
+  const token = jwt.sign({ user : email, _id, role }, "mySecretCode200987**$", { expiresIn: "2h" });
+  return token;
+};
+
+dotenv.config();
+
+async function toAuthenticate(req, res) {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({ message: "Email not exist" });
+    }
+    if (user.password !== password || user.email !== email) {
+      return res.status(401).json({ message: "Email or Password incorrect" });
     }
 
+    const token = generateToken(user.email, user._id, user.role);
+    res.status(200).json({ token });
+  } catch (error) {
+    console.error('Authentication Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
 
-module.exports = toAuthenticate
+module.exports = { toAuthenticate };

@@ -1,40 +1,19 @@
 const User = require("../models/user.model");
 const bcrypt = require("bcrypt");
-const saltRounds = 459;
 
 // This function create Users
 async function createUser(req, res) {
-  const { body } = req;
-
-  if (!body.name || !body.email || !body.age || !body.password) {
-    console.error('Error Creating a new User: Please fill all the fields');
-    return res.status(400).json({ error: 'Please fill all the fields' });
-  }
-
   try {
-
-    // Let's hash the password
-    const passwordHash = await bcrypt.hash(body.password, saltRounds);
-
-    // Let's create the user
-    const userCount = await User.countDocuments();
-    const newUser = await User.create({
-      id: userCount + 1,
-      name: body.name,
-      email: body.email,
-      age: body.age,
-      password: passwordHash,
+    const user = new User({
+      email: req.body.email,
+      password: req.body.password,
+      name: req.body.name,
     });
-
-    res.status(201).json(newUser);
-  } catch (err) {
-    console.error('Error Creating a new User:', err);
-    if (err.code === 11000) {
-      return res.status(400).json({ error: 'Email already exists' });
-    }
-    res.status(500).json({ error: 'Internal server error' });
-  }
-}
+    await user.save();
+    res.status(201).json({ message: 'User saved successfully!' });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }};
 
 
 
@@ -66,63 +45,40 @@ async function getUserById(req, res) {
 
 // This one update the user
 async function updateUser(req, res) {
-  const {
-    body,
-    params: { id },
-  } = req;
-  try {
-    const user = await User.findOne({ _id: id });
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+  const token = req.headers.authorization.split(' ')[1];
+    const decodedToken = jwt.verify(token, "mySecretCode200987**$");
+    const role = decodedToken.role;
+    if (role === 'admin') {
+      const updatedUser = {
+        email: req.body.email,
+        password: req.body.password,
+        role: req.body.role,
+        name: req.body.name,
+      };
+      User.updateOne({ _id: req.params.id }, updatedUser)
+        .then(() => res.status(200).json({ message: 'User updated successfully!' }))
+        .catch(() => res.status(404).json({ message: 'User not found' }));
+    } else {
+      res.status(403).json({ message: 'You are not an admin' });
     }
-
-    if (!body.name || !body.email || !body.age || !body.password) {
-      return res.status(400).json({ error: "Please fill the body form" });
-    }
-
-    const updatedUser = await User.findOneAndUpdate(
-      { _id: id },
-      {
-        $set: {
-          name: body.name,
-          email: body.email,
-          age: body.age,
-          password: body.password,
-        },
-      },
-      { new: true }
-    );
-
-    console.log("User was updated successfully", updatedUser);
-    return res.status(200).json({ message: "User updated successfully" });
-  } catch (error) {
-    console.error("Error updating user:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-}
+};
 
 // this one delete the selected User
 async function deleteUser(req, res) {
-  const id = req.params.id;
-
-  try {
-    const user = await User.findOne({ _id: id });
-
-    if (!user) {
-      console.log("User is not in our database");
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const deletedUser = await User.findOneAndDelete({ _id: id });
-
-    res.status(200).json({ message: "User deleted successfully" });
-    console.log("User was deleted successfully", deletedUser);
-  } catch (error) {
-    console.error("Error deleting user:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+  try{
+  const token = req.headers.authorization.split(' ')[1];
+  const decodedToken = jwt.verify(token, "mySecretCode200987**$");
+  const role = decodedToken.role;
+  if (role === 'admin') {
+    //console.log(role);
+  await User.deleteOne({_id: req.params.id});
+  res.status(201).json({ message: 'User deleted successfully!' });        
+  } else {
+    res.status(400).json({ message: 'User not found' });
   }
-}
+  }catch (error) {
+    res.status(403).json({ message: 'You are not an admin' });
+  }};
 
 module.exports = {
   createUser,
